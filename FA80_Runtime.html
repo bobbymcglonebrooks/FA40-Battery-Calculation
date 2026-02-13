@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FA40/FA80 Standby Time Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .device-selector {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .device-selector label {
+            font-weight: 600;
+            margin-right: 20px;
+        }
+        
+        .device-selector input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .input-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .input-group h3 {
+            margin-top: 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .secondary-button {
+            background-color: #6c757d;
+        }
+        
+        .secondary-button:hover {
+            background-color: #5a6268;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e8f4f8;
+            border-radius: 5px;
+            border: 1px solid #b8e0e8;
+        }
+        
+        .results h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .summary-item strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .info-text {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .fa80-only {
+            display: none;
+        }
+        
+        .fa80-only.show {
+            display: block;
+        }
+        
+        .device-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FA40/FA80 Standby Time Calculator</h1>
+        
+        <div class="device-selector">
+            <label>Select Device Type:</label>
+            <label><input type="radio" name="deviceType" value="FA40" checked onchange="updateDeviceType()">FA40 (4 zones, max 40 alarms)</label>
+            <label><input type="radio" name="deviceType" value="FA80" onchange="updateDeviceType()">FA80 (8 zones, max 80 alarms)</label>
+        </div>
+        
+        <div id="deviceInfo" class="device-info">FA40 selected: 4 zones, up to 10 alarms per zone</div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <h3>System Components</h3>
+                <label for="alarmCurrent">Current per Alarm (mA):</label>
+                <input type="number" id="alarmCurrent" value="8.8" step="0.1">
+                
+                <label for="mainboardCurrent">Main Board Quiescent Current (mA):</label>
+                <input type="number" id="mainboardCurrent" value="10" step="0.1">
+                
+                <label for="uiBoardCurrent">UI Board Quiescent Current (mA):</label>
+                <input type="number" id="uiBoardCurrent" value="10" step="0.1">
+                
+                <label for="psuBoardCurrent">PSU Board Quiescent Current (mA):</label>
+                <input type="number" id="psuBoardCurrent" value="50" step="0.1">
+            </div>
+            
+            <div class="input-group fa80-only">
+                <h3>FA80 Extra Boards</h3>
+                <label for="extraUIBoards">Extra UI Boards (0-4):</label>
+                <select id="extraUIBoards" onchange="updateExtraBoards()">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+                
+                <label for="relayBoardCurrent">Current per Relay Board (mA):</label>
+                <input type="number" id="relayBoardCurrent" value="5" step="0.1">
+                
+                <div class="info-text">Extra relay boards: <span id="extraRelayBoards">0</span> (matching UI boards)</div>
+            </div>
+            
+            <div class="input-group">
+                <h3>VAD Configuration</h3>
+                <label for="vadCurrent">Current per VAD (mA):</label>
+                <input type="number" id="vadCurrent" value="25" step="0.1">
+                
+                <label for="vadsPerZone">VADs per Zone:</label>
+                <input type="number" id="vadsPerZone" value="1" min="0" step="1">
+                <div class="info-text">Total VADs: <span id="totalVADs">4</span> (<span id="zoneCount">4</span> zones)</div>
+            </div>
+            
+            <div class="input-group">
+                <h3>Battery Configuration</h3>
+                <label for="batteryCapacity">Battery Capacity (Ah):</label>
+                <input type="number" id="batteryCapacity" value="9" step="0.1">
+            </div>
+        </div>
+        
+        <button onclick="calculateRuntime()">Calculate Runtime</button>
+        <button class="secondary-button" onclick="downloadCSV()">Download CSV</button>
+        
+        <div id="results" class="results hidden">
+            <h2>Results Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <strong>Base System Current</strong>
+                    <span id="baseCurrent">-</span> mA
+                </div>
+                <div class="summary-item">
+                    <strong>Base System Power (24V)</strong>
+                    <span id="basePower">-</span> W
+                </div>
+                <div class="summary-item">
+                    <strong>6 Alarms Runtime</strong>
+                    <span id="runtime6">-</span>
+                </div>
+                <div class="summary-item">
+                    <strong><span id="midpointLabel">20</span> Alarms Runtime</strong>
+                    <span id="runtimeMid">-</span>
+                </div>
+                <div class="summary-item">
+                    <strong><span id="maxLabel">40</span> Alarms Runtime</strong>
+                    <span id="runtimeMax">-</span>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="runtimeChart"></canvas>
+            </div>
+            
+            <h3>Detailed Runtime Table</h3>
+            <table id="runtimeTable">
+                <thead>
+                    <tr>
+                        <th>Alarms</th>
+                        <th>Current (mA)</th>
+                        <th>Runtime (hours)</th>
+                        <th>Runtime (days)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        let chartInstance = null;
+        let calculatedData = [];
+        let currentDevice = 'FA40';
+        
+        function updateDeviceType() {
+            currentDevice = document.querySelector('input[name="deviceType"]:checked').value;
+            const fa80Elements = document.querySelectorAll('.fa80-only');
+            
+            if (currentDevice === 'FA80') {
+                fa80Elements.forEach(el => el.classList.add('show'));
+                document.getElementById('deviceInfo').textContent = 'FA80 selected: 8 zones, up to 10 alarms per zone';
+                document.getElementById('zoneCount').textContent = '8';
+                document.getElementById('midpointLabel').textContent = '40';
+                document.getElementById('maxLabel').textContent = '80';
+            } else {
+                fa80Elements.forEach(el => el.classList.remove('show'));
+                document.getElementById('deviceInfo').textContent = 'FA40 selected: 4 zones, up to 10 alarms per zone';
+                document.getElementById('zoneCount').textContent = '4';
+                document.getElementById('midpointLabel').textContent = '20';
+                document.getElementById('maxLabel').textContent = '40';
+            }
+            updateTotalVADs();
+        }
+        
+        function updateExtraBoards() {
+            const extraUIBoards = document.getElementById('extraUIBoards').value;
+            document.getElementById('extraRelayBoards').textContent = extraUIBoards;
+        }
+        
+        function updateTotalVADs() {
+            const vadsPerZone = parseInt(document.getElementById('vadsPerZone').value) || 0;
+            const zones = currentDevice === 'FA80' ? 8 : 4;
+            const totalVADs = vadsPerZone * zones;
+            document.getElementById('totalVADs').textContent = totalVADs;
+        }
+        
+        // Update total VADs display
+        document.getElementById('vadsPerZone').addEventListener('input', updateTotalVADs);
+        
+        function calculateRuntime() {
+            // Get input values
+            const alarmCurrent = parseFloat(document.getElementById('alarmCurrent').value);
+            const mainboardCurrent = parseFloat(document.getElementById('mainboardCurrent').value);
+            const uiBoardCurrent = parseFloat(document.getElementById('uiBoardCurrent').value);
+            const psuBoardCurrent = parseFloat(document.getElementById('psuBoardCurrent').value);
+            const vadCurrent = parseFloat(document.getElementById('vadCurrent').value);
+            const vadsPerZone = parseInt(document.getElementById('vadsPerZone').value);
+            const batteryCapacity = parseFloat(document.getElementById('batteryCapacity').value);
+            
+            // Device-specific parameters
+            const maxZones = currentDevice === 'FA80' ? 8 : 4;
+            const maxAlarms = currentDevice === 'FA80' ? 80 : 40;
+            
+            // Validate inputs
+            if (alarmCurrent <= 0 || mainboardCurrent <= 0 || uiBoardCurrent <= 0 || 
+                psuBoardCurrent <= 0 || vadCurrent <= 0 || batteryCapacity <= 0 || vadsPerZone < 0) {
+                alert('All current values and battery capacity must be positive');
+                return;
+            }
+            
+            // Calculate base current
+            const totalVADs = maxZones * vadsPerZone;
+            const vadTotalCurrent = totalVADs * vadCurrent;
+            let baseCurrent = mainboardCurrent + uiBoardCurrent + psuBoardCurrent + vadTotalCurrent;
+            
+            // Add extra boards for FA80
+            if (currentDevice === 'FA80') {
+                const extraUIBoards = parseInt(document.getElementById('extraUIBoards').value);
+                const relayBoardCurrent = parseFloat(document.getElementById('relayBoardCurrent').value);
+                const extraUICurrent = extraUIBoards * uiBoardCurrent;
+                const extraRelayCurrent = extraUIBoards * relayBoardCurrent;
+                baseCurrent += extraUICurrent + extraRelayCurrent;
+            }
+            
+            // Calculate runtime for different alarm counts
+            calculatedData = [];
+            const numAlarms = [];
+            const runtimeHours = [];
+            
+            for (let alarms = 1; alarms <= maxAlarms; alarms++) {
+                const totalCurrent = baseCurrent + (alarms * alarmCurrent);
+                const runtime = batteryCapacity / (totalCurrent / 1000);
+                
+                numAlarms.push(alarms);
+                runtimeHours.push(runtime);
+                calculatedData.push({
+                    alarms: alarms,
+                    totalVADs: totalVADs,
+                    vadCurrentTotal: vadTotalCurrent,
+                    totalCurrent: totalCurrent,
+                    runtimeHours: runtime,
+                    runtimeDays: runtime / 24,
+                    extraUIBoards: currentDevice === 'FA80' ? parseInt(document.getElementById('extraUIBoards').value) : 0,
+                    extraRelayBoards: currentDevice === 'FA80' ? parseInt(document.getElementById('extraUIBoards').value) : 0
+                });
+            }
+            
+            // Update summary
+            document.getElementById('baseCurrent').textContent = baseCurrent.toFixed(1);
+            document.getElementById('basePower').textContent = (baseCurrent * 24 / 1000).toFixed(2);
+            document.getElementById('runtime6').textContent = `${runtimeHours[0].toFixed(1)} hrs (${(runtimeHours[0]/24).toFixed(1)} days)`;
+            
+            const midIndex = maxAlarms === 80 ? 34 : 14; // 40 alarms for FA80, 20 for FA40
+            document.getElementById('runtimeMid').textContent = `${runtimeHours[midIndex].toFixed(1)} hrs (${(runtimeHours[midIndex]/24).toFixed(1)} days)`;
+            
+            document.getElementById('runtimeMax').textContent = `${runtimeHours[runtimeHours.length-1].toFixed(1)} hrs (${(runtimeHours[runtimeHours.length-1]/24).toFixed(1)} days)`;
+            
+            // Update chart
+            updateChart(numAlarms, runtimeHours);
+            
+            // Update table
+            updateTable();
+            
+            // Show results
+            document.getElementById('results').classList.remove('hidden');
+        }
+        
+        function updateChart(numAlarms, runtimeHours) {
+            const ctx = document.getElementById('runtimeChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            
+            // Create zone boundary annotations
+            const maxZones = currentDevice === 'FA80' ? 8 : 4;
+            const annotations = {};
+            for (let i = 1; i <= maxZones; i++) {
+                annotations[`zone${i}`] = {
+                    type: 'line',
+                    xMin: i * 10,
+                    xMax: i * 10,
+                    borderColor: 'rgba(0, 0, 0, 0.3)',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    label: {
+                        content: `Zone ${i} Max`,
+                        enabled: true,
+                        position: 'start',
+                        rotation: 270,
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)'
+                    }
+                };
+            }
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: numAlarms,
+                    datasets: [{
+                        label: 'Runtime (hours)',
+                        data: runtimeHours,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        yAxisID: 'y-hours',
+                        tension: 0.1
+                    }, {
+                        label: 'Runtime (days)',
+                        data: runtimeHours.map(h => h / 24),
+                        borderColor: '#e74c3c',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        yAxisID: 'y-days',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${currentDevice} Battery Standby Time vs Number of Alarms`,
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        annotation: {
+                            annotations: annotations
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Number of Alarms'
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        'y-hours': {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Standby Time (hours)'
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        'y-days': {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Standby Time (days)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateTable() {
+            const tbody = document.querySelector('#runtimeTable tbody');
+            tbody.innerHTML = '';
+            
+            // Display at appropriate intervals
+            const interval = currentDevice === 'FA80' ? 10 : 5;
+            
+            for (let i = 0; i < calculatedData.length; i += interval) {
+                const row = tbody.insertRow();
+                const data = calculatedData[i];
+                
+                row.insertCell(0).textContent = data.alarms;
+                row.insertCell(1).textContent = data.totalCurrent.toFixed(1);
+                row.insertCell(2).textContent = data.runtimeHours.toFixed(1);
+                row.insertCell(3).textContent = data.runtimeDays.toFixed(2);
+            }
+        }
+        
+        function downloadCSV() {
+            if (calculatedData.length === 0) {
+                alert('Please calculate runtime first');
+                return;
+            }
+            
+            const batteryCapacity = document.getElementById('batteryCapacity').value;
+            const totalVADs = document.getElementById('totalVADs').textContent;
+            
+            let csv = currentDevice === 'FA80' 
+                ? 'Number_of_Alarms,Total_VADs,VAD_Current_mA,Extra_UI_Boards,Extra_Relay_Boards,Total_Current_mA,Runtime_Hours,Runtime_Days\n'
+                : 'Number_of_Alarms,Total_VADs,VAD_Current_mA,Total_Current_mA,Runtime_Hours,Runtime_Days\n';
+            
+            calculatedData.forEach(data => {
+                if (currentDevice === 'FA80') {
+                    csv += `${data.alarms},${data.totalVADs},${data.vadCurrentTotal.toFixed(1)},${data.extraUIBoards},${data.extraRelayBoards},${data.totalCurrent.toFixed(1)},${data.runtimeHours.toFixed(1)},${data.runtimeDays.toFixed(2)}\n`;
+                } else {
+                    csv += `${data.alarms},${data.totalVADs},${data.vadCurrentTotal.toFixed(1)},${data.totalCurrent.toFixed(1)},${data.runtimeHours.toFixed(1)},${data.runtimeDays.toFixed(2)}\n`;
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            let filename = `${currentDevice}_Runtime_${batteryCapacity}Ah_Battery_${totalVADs}VADs`;
+            if (currentDevice === 'FA80') {
+                const extraBoards = document.getElementById('extraUIBoards').value;
+                if (extraBoards > 0) {
+                    filename += `_${extraBoards}ExtraBoards`;
+                }
+            }
+            a.download = filename + '.csv';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
